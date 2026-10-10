@@ -1,0 +1,45 @@
+we are creating this first model to start simple and 
+
+we first consider a simpler problem, with only 2 tasks, 1 server, 3 periods (w/ different
+electricity costs, ps1, ps2, ps3; each tasks takes 1 unit of energy for simplicity)
+
+J = {1,2} are the tasks
+T = {1, 2, 3} are the periods for the prices 5€, 1€, 2€ respectively
+
+the decision variable should be the period at which a certain task is executed.
+For example, s1 = 2 would mean execute task 1 in the period 2 (of course,
+s1 != s2.. two tasks cannot be executed in the same period!)
+
+in this simple case we want to execute 2 both tasks (1 and 2) in the cheapest periods possible
+without allowing them to be executed simulatneously. -> this mins we are just trying to
+minimize the total cost ps1 + ps2
+
+----
+
+OUTPUT:
+(.venv) tmvaz@t iaes % python3 proj.py
+schedule =  [3, 2]
+cost =  3
+
+tjis means that task 1 should be executed in period 3, task 2 should be executed in period 2
+and the cost of doing so is 3 (but by manual inspection we found out that [3, 2] would also
+minimize the cost, also being 3)
+
+----
+
+PYTHON CODE:
+import minizinc
+
+model = minizinc.Model("./models/model1.mzn")
+solver = minizinc.Solver.lookup("gecode") # in the future we can try using chuffed as well
+
+inst = minizinc.Instance(solver, model)
+
+inst["n_tasks"]     = 2
+inst["n_periods"]   = 3
+inst["price"]       = [5,1,2]
+
+res = inst.solve()
+
+print("schedule = ", res["start"])
+print("cost = ", res.objective)
