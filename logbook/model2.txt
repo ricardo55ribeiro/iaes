@@ -1,0 +1,53 @@
+extends model1 to consider multiple servers and tasks with different durations
+each task j now has a duration dj (number of consecutive periods needed to finish)
+
+2 tasks can be executed simultaneously, as long as they are on different
+servers, but 2 tasks cannot overlap on the same server; also, every task
+must finish within the available periods
+
+now we have the servers M = {1, ..., n_servers}
+and dj for the time each task takes
+
+two decision variables for each task: sj for the start instance and
+mj for the server that was chosen; the end of the task is, of course, sj+dj
+(because tasks can now take multiple periods,we need to make sure they finish within
+the allowed interval, so sj+dj - 1 <= T)
+
+tasks shoudl be imposed to run in different servers (mi != mj),
+OR task i ends before task j starts (si+di <= sj)
+OR task j ends before task i starts (sj+dj <= si)
+
+the goal is still to minimize electricity costs, but now we are summing the
+prices of all periods occupied by each task, rather than just its starting period
+
+---
+
+OUTPUT:
+
+(.venv) tmvaz@t iaes % python3 proj.py
+schedule =  [2, 3, 2, 2]
+servers =  [3, 1, 1, 2]
+cost =  7
+
+---
+
+PYTHON:
+
+import minizinc
+
+model = minizinc.Model("./models/model2.mzn")
+solver = minizinc.Solver.lookup("gecode") # in the future we can try using chuffed as well
+
+inst = minizinc.Instance(solver, model)
+
+inst["n_tasks"]     = 4
+inst["n_periods"]   = 3
+inst["n_servers"]   = 3
+inst["duration"]    = [2, 1, 1, 1]  # task 1 takes 2 periods; rest takes 1
+inst["price"]       = [5,1,2]
+
+res = inst.solve()
+
+print("schedule = ", res["start"])
+print("servers = ", res["server"])
+print("cost = ", res.objective)
