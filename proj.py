@@ -8,8 +8,13 @@ inst = minizinc.Instance(solver, model)
 inst["n_tasks"]     = 4
 inst["n_periods"]   = 3
 inst["n_servers"]   = 3
-inst["duration"]    = [2, 1, 1, 1]  # task 1 takes 2 periods; rest takes 1
+inst["duration"]    = [2,1,1,1]  # task 1 takes 2 periods; rest takes 1
 inst["price"]       = [5,1,2]
+
+# time windows for each task;
+# ex: task 4 can start from period 2 and end at period 3
+inst["min_start"]   = [1,1,1,2]
+inst["max_end"]     = [3,2,3,3]
 
 res = inst.solve()
 

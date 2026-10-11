@@ -20,6 +20,9 @@ OR task j ends before task i starts (sj+dj <= si)
 the goal is still to minimize electricity costs, but now we are summing the
 prices of all periods occupied by each task, rather than just its starting period
 
+also included time windows for each task (according to the paper, tasks should
+start no earlier than ej and finish no later than lj; ej <= sj and sj+dj-1 <= lj)
+
 ---
 
 OUTPUT:
