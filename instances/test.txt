@@ -5,3 +5,7 @@ duration    2 1 1 1
 price       5 1 2
 min_start   1 1 1 2
 max_end     3 2 3 3
+task_energy 1 1 1 1
+server_energy 1 1 1
+turn_on_cost 5 5 5
+turn_off_cost 2 2 2
