@@ -1,0 +1,20 @@
+extends model2 by introducing task_energy[j], representing the energy consumed by each task per period
+the objective function now multiplies the electricity price of each occupied period by the task's energy consumption, instead of assuming all tasks consume 1 unit of energy per period
+
+
+introduced on[m,t] to represent whether server m is powered on during period t
+added a constraint ensuring that the assigned server remains on throughout each task's execution
+
+
+introduced server_energy[m] to represent the baseline energy consumed by each server per period while powered on
+updated the objective function to include server energy costs, in addition to task execution costs
+
+
+introduced turn_on[m,t] and turn_off[m,t] to track the server start and shutdown events, including the initial and final transitions
+added turn_on_cost[m] and turn_off_cost[m] as fixed costs per transition, and updated the objective function to minimize total operating cost
+
+
+tested the model with two examples to see if the server should stay on or turn off between tasks (commented parts on python code)
+when turning on/off was expensive, the server stayed on (cost = 18)
+when turning on/off was cheap, the server turned off (cost = 12)
+both worked as expected

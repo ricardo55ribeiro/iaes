@@ -1,7 +1,7 @@
 import minizinc
 import sys
 
-model = minizinc.Model("./models/model2.mzn")
+model = minizinc.Model("./models/model3.mzn")
 solver = minizinc.Solver.lookup("gecode") # in the future we can try using chuffed as well
 
 inst = minizinc.Instance(solver, model)
@@ -17,3 +17,7 @@ res = inst.solve()
 print("schedule = ", res["start"])
 print("servers = ", res["server"])
 print("cost = ", res.objective)
+
+#print("on =", res["on"])
+#print("turn_on =", res["turn_on"])
+#print("turn_off =", res["turn_off"])
