@@ -1,11 +1,12 @@
 n_tasks     4
 n_periods   3
+q           60
 n_servers   3
 duration    2 1 1 1
 price       5 1 2
 min_start   1 1 1 2
 max_end     3 2 3 3
-task_energy 1 1 1 1
-server_energy 1 1 1
+task_power  1.0 1.0 1.0 1.0
+server_idle_power 1000.0 1000.0 1000.0
 turn_on_cost 5 5 5
 turn_off_cost 2 2 2

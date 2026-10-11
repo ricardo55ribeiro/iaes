@@ -1,0 +1,21 @@
+model4 is a continuation of model3
+started by converting the energy calculations to the paper's units
+
+
+added q (minutes per period), changed task power to kW and server idle power to W
+updated the calculations to convert power into kWh and than euros
+tested with the previous values and got the same result
+
+
+tested with 30-minute periods and decimal electricity prices
+also changed turn_on_cost and turn_off_cost to float to be able to use decimal values
+tested with cheaper switching costs and the server turned off between tasks
+
+
+changed task periods to start at 0, like in the paper
+changed the server on/off arrays to start at period 0 as well
+changed the price array to start at 0 as well
+tested tasks of different duration and with negative electricity prices
+
+
+[maybe this is not the end of model4, as units changes don't motivate a new model version by themselves?]
