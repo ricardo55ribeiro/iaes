@@ -12,8 +12,12 @@ array[1..n_servers] of float: turn_on_cost;         % in €
 array[1..n_servers] of float: turn_off_cost;        % in €
 array[1..n_tasks] of var 0..n_periods-1: start;
 array[1..n_tasks] of var 1..n_servers : server;
-array[1..n_tasks] of int : cpu, ram, io;            
-array[1..n_tasks] of int : cpu_c, ram_c, io_c;
+array[1..n_tasks] of int: cpu;
+array[1..n_tasks] of int: ram;
+array[1..n_tasks] of int: io;
+array[1..n_servers] of int: cpu_c;
+array[1..n_servers] of int: ram_c;
+array[1..n_servers] of int: io_c;
 
 array[1..n_servers, 0..n_periods-1] of var bool: on;
 array[1..n_servers, 0..n_periods-1] of var bool: turn_on;
@@ -41,13 +45,13 @@ constraint forall(m in 1..n_servers, t in 0..n_periods - 1) (
     ) <= cpu_c[m]
     /\
     sum(j in 1..n_tasks) (
-        memory[j]*bool2int(server[j] == m /\ start[j] <= t /\ t < start[j] + duration[j])
+        ram[j]*bool2int(server[j] == m /\ start[j] <= t /\ t < start[j] + duration[j])
     ) <= ram_c[m]
     /\
     sum(j in 1..n_tasks) (
         io[j]*bool2int(server[j] == m /\ start[j] <= t /\ t < start[j] + duration[j])
     ) <= io_c[m]
-)
+);
 
 % to restrict possible values of sj into the time window
 constraint forall(j in 1..n_tasks)(

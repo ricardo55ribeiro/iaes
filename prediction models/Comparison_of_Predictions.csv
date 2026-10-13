@@ -1,0 +1,7 @@
+Model,MAE €/MWh,Improvement vs Default,Mean Fold MAE €/MWh
+CatBoost,13.7709,9.5753,13.787
+LightGBM,13.8687,8.9327,13.8856
+XGBoost,13.9119,8.6496,13.9289
+HistGradientBoosting,14.0203,7.9377,14.0373
+Lasso,14.0981,7.4267,14.1094
+Original SMPEA,15.2291,0,15.2423
