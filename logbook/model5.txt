@@ -1,0 +1,9 @@
+now considers the computational resources available on each server
+
+now has cpu, ram (memory) and io for each task, and the corresponding capacities
+for each server; also removed the constraint that prevented tasks from running
+at teh same time on the same server (since now they can overlap). ofc added the
+new parameters to the test/instance files
+
+for each server and time period checks that the total resources
+required by all tasks stay within the server's limits..
