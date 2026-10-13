@@ -1,0 +1,47 @@
+downloaded the original ICON electricity price dataset from OpenML 
+(https://www.openml.org/search?id=1168&type=data&sort=runs&status=active)
+it has around 38000 records, including predicted and actual electricity prices
+the data covers 2011 to 2013, with 1 record every 30 minutes (48 per day)
+records include prices, electricity demand, wind production, weather and date information
+
+
+connected successfully the historical electricity price data to the project
+also updated proj.py so it calculates the real cost using real electricity prices
+
+
+created a simple naive prediction model using the actual prices from the previous day
+it predicts the period's price by directly copying the price from 
+the same period of the previous day, without any training yet
+
+
+testing for all days, our model got an average error of 19.18 €/MWh
+while the original forecast got 14.92 €/MWh, showing that it is
+not a better prediction model than the one already implemented
+
+
+tried a ML model (gradient boosted decision tree)
+using the original forecast, wind, demand and date information
+trained it with the 2011 and 2012 data, while tested on the 2013 data
+got an average error of 14.88 €/MWh, compared to 15.87 €/MWh from the original forecast
+
+
+for instance, on 3/5/2013, the prediction makes the model get a slightly cheaper
+real cost (0.16196 vs 0.16240) with the instance historical_day_test.txt
+
+
+I got other ideas for prediction models that could outperform the first one
+to compare them, I tested 5 models using older data for training and
+newer data for testing, repeating this across several time periods
+
+CatBoost had the lowest average error overall, so I decided to use it
+all 5 models also performed better than the original forecast, which is pretty motivating
+
+
+did minor changes in model5.mzn so it can now run with CPU, RAM and I/O constraints
+tested both the original and CatBoost forecasts for various examples
+
+
+tested model5 with 4 tasks and 2 servers (catboost_vs_default_test.txt instance)
+using the original forecast against the CatBoost prediction
+CatBoost chose different periods to execute the tasks and got a lower real cost 
+(0.36666€ vs 0.38948€)

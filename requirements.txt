@@ -1,0 +1,7 @@
+minizinc
+pandas
+numpy
+scikit-learn
+lightgbm
+catboost
+xgboost

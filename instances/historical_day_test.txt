@@ -1,0 +1,18 @@
+n_tasks             2
+n_periods           48
+n_servers           2
+q                   30
+duration            1 1
+price_input         0.20 0.20 0.20
+task_power          2.0 2.0
+server_idle_power   1000.0 1250.0
+turn_on_cost        0.03 0.05
+turn_off_cost       0.02 0.04
+min_start           0 0
+max_end             48 48
+cpu                 12 18
+ram                 16 28
+io                  6 10
+cpu_c               48 90
+ram_c               64 40
+io_c                30 30

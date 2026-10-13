@@ -10,7 +10,6 @@ turn_on_cost        0.03
 turn_off_cost       0.02
 min_start           0 2
 max_end             2 3
-
 cpu                 2 2 1 1
 cpu_c               3 3 3
 ram                 2 1 2 1

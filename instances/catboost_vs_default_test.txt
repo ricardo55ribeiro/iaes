@@ -1,0 +1,17 @@
+n_tasks             4
+n_periods           48
+n_servers           2
+q                   30
+duration            2 1 2 1
+task_power          2.0 1.2 3.0 1.8
+server_idle_power   350.0 750.0
+turn_on_cost        0.03 0.05
+turn_off_cost       0.02 0.03
+min_start           4 4 24 24
+max_end             12 12 32 32
+cpu                 30 20 35 15
+ram                 24 16 28 12
+io                  12 10 15 8
+cpu_c               45 70
+ram_c               48 64
+io_c                20 32
