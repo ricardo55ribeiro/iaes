@@ -45,7 +45,18 @@ if len(sys.argv) > 2:
 
         selected_prices = ml_day["CatBoost"]
 
-    inst["price_input"] = (selected_prices / 1000).tolist()
+    q = params["q"]
+    n_periods = params["n_periods"]
+
+    if q not in (5, 30) or n_periods * q != 1440:
+        raise ValueError("Historical mode requires a full day with 5- or 30-minute periods")
+
+    repeats = 30 // q
+
+    forecast = (selected_prices / 1000).repeat(repeats).tolist()
+    actual = (day["SMPEP2"] / 1000).repeat(repeats).tolist()
+
+    inst["price_input"] = forecast
 
 
 res = inst.solve()
@@ -61,9 +72,6 @@ print("turn_off =", res["turn_off"])
 
 # calculate real cost
 if len(sys.argv) > 2:
-    forecast = (selected_prices / 1000).tolist()
-    actual = (day["SMPEP2"] / 1000).tolist()
-
     hours = params["q"] / 60
     energy = [0.0] * params["n_periods"]
 
