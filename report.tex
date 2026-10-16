@@ -1,0 +1,147 @@
+\documentclass[10pt,a4paper,twocolumn]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,microtype}
+\usepackage[margin=13mm,top=12mm,bottom=13mm,footskip=6mm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,array,xcolor}
+\usepackage{enumitem,titlesec}
+\usepackage[hidelinks]{hyperref}
+\definecolor{ink}{HTML}{17354A}
+\setlength{\columnsep}{6mm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\setlength{\emergencystretch}{1.5em}
+\titleformat{\section}{\normalsize\bfseries\color{ink}}{\thesection}{0.45em}{}
+\titlespacing*{\section}{0pt}{7pt}{3pt}
+\setlist[itemize]{leftmargin=*,nosep,topsep=2pt}
+\setlength{\abovedisplayskip}{5pt}
+\setlength{\belowdisplayskip}{5pt}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\pending}[1]{\textcolor{ink}{\textbf{[Complete before submission: #1]}}}
+\pagestyle{plain}
+% Reject accidental overflow beyond the two-page submission limit.
+\newcounter{reportpages}
+\AddToHook{shipout/after}{\stepcounter{reportpages}}
+\AddToHook{enddocument/afterlastpage}{%
+  \ifnum\value{reportpages}=2\relax\else
+    \PackageError{report}{Expected 2 pages; got \arabic{reportpages}}{Shorten the text or adjust spacing.}%
+  \fi
+}
+\begin{document}
+\twocolumn[{
+\centering
+{\small\scshape Instituto Superior T\'ecnico, Universidade de Lisboa\par}
+{\small Symbolic Explainable Artificial Intelligence\par}
+\vspace{5pt}
+{\LARGE\bfseries CSPLib P059: Energy-Cost Aware Scheduling\par}
+\vspace{5pt}
+{\normalsize Ricardo Ribeiro (109507) \qquad Telmo Vaz (82103)\par}
+\vspace{7pt}
+\begin{minipage}{0.98\textwidth}
+\small\textbf{Abstract.} We developed a MiniZinc model for CSPLib problem 059, scheduling computing tasks under forecast electricity prices. It enforces time windows and CPU, memory and I/O capacities while accounting for energy and server switching costs. An independent exhaustive audit of five predictors on a four-task instance over 364 days finds that CatBoost has the lowest price MAE, but Lasso yields the lowest realised cost. We examine this difference and the limits of what these experiments establish.
+
+\end{minipage}
+\vspace{7pt}
+}]
+
+\section{Problem and approach}
+Cloud computing providers can sometimes postpone workloads without missing customer deadlines. With variable electricity prices, this flexibility offers a way to reduce operating costs. The 2014 ICON competition~\cite{icon} formalised this setting in the scheduling problem listed as CSPLib 059. Each task must run once, without interruption, within its time window. Tasks may share a server if their combined CPU, memory and I/O demands fit its capacities. Cheap periods alone do not determine the best schedule, because servers consume idle power and incur switching costs. An additional startup may outweigh the saving from moving a task.
+
+We developed \code{model5.mzn} incrementally to optimise task placement and server operation jointly. Since prices are unknown when scheduling, we use forecasts and evaluate costs afterwards with observed prices. Our Python entry point, \code{proj.py}, reads an instance, calls MiniZinc and reports the schedule and cost.
+
+\section{Our constraint formulation and model}
+In \code{model5.mzn}, we give each task a start period, \code{start[j]}, and an assigned server, \code{server[j]}. Its fixed \code{duration[j]} determines the consecutive periods it occupies, excluding interruption and migration. We bound its start by \code{min\_start[j]} and its completion by both \code{max\_end[j]} and the horizon. Completion times are exclusive. A task starting at 4 with duration 2 occupies periods 4 and 5 and can meet a deadline of 6.
+
+To allow tasks to share servers, we replaced the earlier prohibition on overlap with capacity checks. For each server \code{m} and period \code{t}, the condition
+\begingroup\footnotesize
+\begin{verbatim}
+server[j] == m /\ start[j] <= t
+               /\ t < start[j] + duration[j]
+\end{verbatim}
+\endgroup
+identifies the tasks running there. We convert it to zero or one using \code{bool2int}, multiply by \code{cpu[j]}, and sum over tasks. The sum must not exceed \code{cpu\_c[m]}. Equivalent checks enforce RAM and I/O capacities, allowing concurrency only when all three resources suffice.
+
+The Boolean \code{on[m,t]} represents server operation. Each task requires its assigned server to be on throughout execution. The \code{turn\_on} and \code{turn\_off} arrays record state changes; an internal startup satisfies
+\begingroup\footnotesize
+\begin{verbatim}
+turn_on[m,t] = (on[m,t] /\ not on[m,t-1])
+\end{verbatim}
+\endgroup
+Boundary constraints charge startup in the first period and shutdown after the last, if the server is on. Unoccupied servers may remain on because bridging an idle gap can cost less than switching off and restarting. Negative prices can also favour idle operation.
+
+The \code{solve minimize} objective adds task energy, server idle energy and switching costs. Power is multiplied by \code{q/60.0} hours and the period's price in euro/kWh; idle power is first divided by 1000 to convert watts to kW. Switching charges are fixed euros per event. We denote this total by $C_f(x)$ for schedule $x$ under forecasts $f$. Gecode searches jointly over task placement and server states, allowing a dearer execution period when it avoids greater operating or switching costs.
+
+\section{Forecasting procedure}
+We use the original market forecast as the baseline and as an input to all five predictors. Forecast wind production, forecast system load, period of day and month supply the remaining inputs. We compare histogram gradient boosting, LightGBM, CatBoost, XGBoost and Lasso with scaling and calendar encoding. The Lasso model gives us a simple regression reference; it does not reproduce the autoregressive structure of LEAR~\cite{lago}.
+
+Our cleaning script keeps complete 48-period days with available forecast and observed prices. The training script defines nine successive two-month evaluation blocks, from July 2012 to December 2013. For each block, it trains a fresh model on all earlier data and fits missing-value imputation on that same history. Later blocks can use observations from earlier blocks, but never their own targets. Prices are divided by 1000 to convert euro/MWh to euro/kWh. When scheduling at five-minute resolution, we repeat each half-hour price six times. This assumes a constant price within that half-hour; task durations and windows must use five-minute units as well.
+
+We also compared Gecode 6.4.0 and Chuffed 0.14.0 using MiniZinc 2.10.1 on Apple Silicon. The script \code{compare\_solvers.py} in \code{prediction models/} uses \code{catboost\_vs\_default\_test.txt} and CatBoost forecasts for 2013-05-01. Chuffed rejected the original float objective, so both solvers received the same temporary integer formulation, rounding each cost coefficient to micro-euros. Across three default-search runs with a 10-second limit, Gecode proved the scaled optimum every time (median solve time 0.670\,s; forecast cost \texteuro0.562894). Chuffed reached the limit without proving optimality (median 9.857\,s; costs \texteuro1.740888--1.809130). Median compilation times were 0.125 and 0.123\,s, respectively. Returned schedules passed independent feasibility checks. The results favour Gecode for this formulation and instance; they do not establish a general solver ranking. Full results are saved in \code{Solver\_Comparison.csv}.
+
+\section{From prediction error to scheduling cost}
+We initially selected CatBoost for its lower average prediction error. To assess that choice economically, we draw on an independent enumeration audit using the stored predictions for 364 days in 2013, or 17,472 half-hour periods. The same four-task, two-server instance was scheduled each day. Of its 50,176 possible start/assignment combinations, 44,100 satisfy the time and resource constraints. For each combination, dynamic programming over the on/off states found the cheapest server operation. The audit chose a schedule using forecast prices, then recalculated its cost using observed prices. Ties within $10^{-12}$ euros followed a fixed enumeration order. Observed prices played no part in this choice.
+
+\begin{center}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Forecast & MAE\,$^{a}$ & Cost (\texteuro) & Saving\,$^{b}$\\
+\midrule
+Original & 15.8654 & 194.9567 & ---\\
+Hist. boosting & 14.5957 & 192.5712 & 1.224\%\\
+LightGBM & 14.4750 & 192.3556 & 1.334\%\\
+CatBoost & \textbf{14.4145} & 192.0821 & 1.475\%\\
+XGBoost & 14.5533 & 192.5633 & 1.228\%\\
+Lasso & 14.7289 & \textbf{191.5309} & \textbf{1.757\%}\\
+Perfect information & --- & 188.0736 & 3.531\%\\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}
+\begin{minipage}{\columnwidth}
+\footnotesize $^{a}$Euro/MWh, recomputed over 2013. $^{b}$Reduction in realised cost relative to the original forecast. The same workload is repeated daily. Perfect information is an evaluation reference, not a deployable forecasting method.
+\end{minipage}
+\end{center}
+
+The lowest MAE and lowest scheduling cost belong to different models. CatBoost improves on the original forecast on 163 days, costs more on 90 and ties on 111. Lasso improves on 186 days, costs more on 52 and ties on 126. Solving with observed prices supplied in advance gives a perfect-information reference unavailable in practice. Relative to the original forecast, CatBoost captures about 42\% of that available saving and Lasso about 50\%. This ranking is workload-specific; CatBoost saves only 0.866\% in the two-task instance.
+
+This comparison is expressed by decision regret,
+\[
+ R(f,r)=C_r(x_f)-\min_{x\in\mathcal F}C_r(x),
+\]
+where $r$ denotes observed prices, $\mathcal F$ is the feasible set, and $x_f$ is a schedule minimising forecast cost. The first term is what the chosen schedule actually costs; the second is the perfect-information optimum. Unlike MAE, regret accounts for the decisions that prediction errors change. In particular, the cost of starting a task depends on prices throughout its duration and on the server operation it requires. A smaller average price error need not preserve the ordering of these alternatives. This explains our interest in predict-and-optimize methods~\cite{spo,mandi} and in selecting predictors by validation cost across several workloads.
+
+The table is reproducible with \code{audit\_prediction\_costs.py} in the prediction models folder, which exports \code{Scheduling\_Cost\_Comparison.csv}. It evaluates saved forecasts rather than timing \code{proj.py}. Training provenance still requires a versioned rerun and an independent final evaluation, since the validation blocks also select the predictor.
+
+\section{Limitations and further work}
+Our immediate priority is verification. The runner currently accesses the solution without checking solver status or imposing a time limit, and some toy instances contain missing or mismatched arrays. We would validate inputs, handle infeasible or interrupted runs, and independently reconstruct resource use, server transitions and costs. Small exhaustive cases would test feasibility and optimality claims.
+
+Efficiency needs a different experiment. With $J$ tasks, $M$ servers, $T$ periods and three resources, the resource sums contain $O(JMT)$ contributions, which may make compilation expensive before search even begins. We would tighten start domains, exclude servers that cannot host a task and precompute the energy cost of each admissible start. Comparing the resulting model with global cumulative constraints would show whether stronger propagation improves performance. Symmetry breaking is safe only for identical servers. Integer cost scaling may permit other solvers, but requires bounds on rounding error and numerical range. These changes remain untested. Compilation, first-solution time and optimality status require separate measurement.
+
+The same model could also support explanations. If a task is assigned to a period that is not the cheapest, we could force an earlier start and solve again. The alternative might violate a capacity limit or increase the total cost through server operation. Reporting that difference would explain the choice in terms of the constraints. Such counterfactuals are not implemented yet. Selecting forecasts by validation regret would also be a more modest next step than implementing full decision-focused learning~\cite{mandi}.
+
+Finally, each task's power and duration are fixed, so its required energy is fixed as well. Our schedules change when it is consumed and how long servers remain on. A cheaper schedule therefore need not use less energy or produce fewer emissions. Further experiments should vary workload density, resource bottlenecks, switching costs and timing flexibility before generalising the savings.
+
+\section{Reproducibility and acknowledgements}
+Install the dependencies in \code{requirements.txt} and MiniZinc with Gecode. From the project root, prepare the data and train the predictors with
+\begin{flushleft}\footnotesize\ttfamily
+python clean\_dataset.py\\
+python "prediction models/\allowbreak{}compare\_prediction\_models.py"
+\end{flushleft}
+For scheduling, run \code{python proj.py} followed by \code{catboost\_vs\_default\_test.txt}, \code{2013-05-01} and \code{catboost}, separated by spaces. Omit the last argument to use the original forecast. Input/output use a custom format, not the official ICON interchange format.
+
+\textbf{Environment.} Python 3.12 and MiniZinc 2.10.1 are the course recommendations, not verified execution versions. \pending{actual Python, MiniZinc/Gecode and package versions.}
+
+\textbf{Video.} \pending{public or accessible video URL.}
+
+\textbf{Sources and AI disclosure.} We used the ICON specification to define the problem and the cited research to frame our evaluation. OpenAI ChatGPT/Codex assisted with code review, literature retrieval, the independent numerical audit and report drafting; it did not change the implementation during these reviews. \pending{authors' verification of this report and any additional AI/web contributions to the submitted code.}
+
+\vspace{-3pt}
+\begin{thebibliography}{4}
+\footnotesize\setlength{\itemsep}{1pt}\setlength{\parskip}{0pt}
+\bibitem{icon} H. Simonis et al. \emph{Energy-Cost Aware Scheduling/Forecasting Competition}. 2014. \href{https://www.csplib.org/Problems/prob059/}{CSPLib 059}.
+\bibitem{lago} J. Lago et al. Forecasting day-ahead electricity prices: A review of state-of-the-art algorithms, best practices and an open-access benchmark. \emph{Applied Energy}, 293:116983, 2021. \href{https://doi.org/10.1016/j.apenergy.2021.116983}{doi:10.1016/j.apenergy.2021.116983}.
+\bibitem{spo} A. N. Elmachtoub and P. Grigas. Smart ``Predict, then Optimize''. \emph{Management Science}, 68(1):9--26, 2022. \href{https://arxiv.org/abs/1710.08005}{arXiv:1710.08005}.
+\bibitem{mandi} J. Mandi et al. Smart Predict-and-Optimize for Hard Combinatorial Optimization Problems. \emph{AAAI}, 34(2):1603--1610, 2020. \href{https://doi.org/10.1609/aaai.v34i02.5521}{doi:10.1609/aaai.v34i02.5521}.
+\end{thebibliography}
+\end{document}

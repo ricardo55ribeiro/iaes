@@ -65,9 +65,10 @@ print("schedule = ", res["start"])
 print("servers = ", res["server"])
 print("estimated cost = ", res.objective)
 
-print("on =", res["on"])
-print("turn_on =", res["turn_on"])
-print("turn_off =", res["turn_off"])
+#for checking internal workings of the model
+#print("on =", res["on"])
+#print("turn_on =", res["turn_on"])
+#print("turn_off =", res["turn_off"])
 
 
 # calculate real cost
